@@ -231,6 +231,29 @@ exec(''.join({} for c,k in zip(base64.b64decode({}), itertools.cycle({}))).encod
                 }
             """
 
+                # Create temp directory for Lambda package
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    # Write lambda function code
+                    lambda_file = os.path.join(temp_dir, "lambda_function.py")
+                    with open(lambda_file, "w") as f:
+                        f.write(base_code)
+                        
+                    # Create requirements.txt
+                    requirements_file = os.path.join(temp_dir, "requirements.txt")
+                    with open(requirements_file, "w") as f:
+                        if self.get_parameter("use_non_default_cryptography_lib") == "Yes":
+                            f.write("cryptography\n")
+                    
+                    # Create zip file in memory
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                        zip_file.write(lambda_file, "lambda_function.py")
+                        zip_file.write(requirements_file, "requirements.txt")
+                        
+                    zip_buffer.seek(0)
+                    resp.payload = zip_buffer.getvalue()
+                    resp.build_message = "Successfully built Lambda deployment package!"
+
             else:
                 resp.payload = base_code.encode()
                 resp.build_message = "Successfully built!"
