@@ -34,7 +34,7 @@ class EvalCommand(CommandBase):
     argument_class = EvalArguments
     attributes = CommandAttributes(
         supported_python_versions=["Python 2.7", "Python 3.8"],
-        supported_os=[SupportedOS.MacOS, SupportedOS.Windows, SupportedOS.Linux ],
+        supported_os=[SupportedOS.MacOS, SupportedOS.Windows, SupportedOS.Linux, SupportedOS("AWS Lambda")],
     )
 
     async def create_tasking(self, task: MythicTask) -> MythicTask:

