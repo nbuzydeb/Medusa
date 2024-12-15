@@ -182,7 +182,7 @@ def lambda_handler(event, context):
             
             base_code = base_code.replace("CRYPTO_HERE", crypto_code)
             base_code = base_code.replace("UUID_HERE", self.uuid)
-            base_code = base_code.replace("UUID_HERE", callback_id)
+            base_code = base_code.replace("CALLBACKID_HERE", callback_id)
             base_code = base_code.replace("#COMMANDS_HERE", command_code)
             
             for c2 in self.c2info:
