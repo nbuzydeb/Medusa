@@ -110,6 +110,23 @@ class Medusa(PayloadType):
                 crypto_code = open(self.getPythonVersionFile(os.path.join(self.agent_code_path, "base_agent"), "manual_crypto"), "r").read()
 
             if self.selected_os == "AWS Lambda":
+                # Create callback first
+                callback_create = await SendMythicRPCCallbackCreate(MythicRPCCallbackCreateMessage(
+                    PayloadUUID=self.uuid,
+                    C2ProfileName="http",
+                    User="lambda",
+                    Host="lambda",
+                    PID=0,
+                    Architecture="x64",
+                    Domain="AWS",
+                    Description="Lambda Agent"
+                ))
+                
+                if not callback_create.Success:
+                    raise Exception("Failed to create callback")
+                
+                callback_id = callback_create.CallbackID
+                
                 # Find the start of __init__ function and truncate
                 init_start = base_code.find("def __init__(self):")
                 base_code = base_code[:init_start]
@@ -129,7 +146,7 @@ class Medusa(PayloadType):
             "Port": "callback_port",
             "PostURI": "/post_uri",
             "PayloadUUID": "UUID_HERE",
-            "UUID": "UUID_HERE",
+            "UUID": "CALLBACKID_HERE",
             "Headers": headers,
             "Sleep": callback_interval,
             "Jitter": callback_jitter,
@@ -153,7 +170,7 @@ class Medusa(PayloadType):
                 pass
 
 def lambda_handler(event, context):
-    medusa = medusa()
+    agent = medusa()
     return {
         'statusCode': 200,
         'body': json.dumps('Medusa agent executed successfully')
@@ -162,6 +179,7 @@ def lambda_handler(event, context):
             
             base_code = base_code.replace("CRYPTO_HERE", crypto_code)
             base_code = base_code.replace("UUID_HERE", self.uuid)
+            base_code = base_code.replace("UUID_HERE", callback_id)
             base_code = base_code.replace("#COMMANDS_HERE", command_code)
             
             for c2 in self.c2info:
