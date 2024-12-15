@@ -125,7 +125,7 @@ class Medusa(PayloadType):
                 if not callback_create.Success:
                     raise Exception("Failed to create callback")
                 
-                callback_id = callback_create.CallbackID
+                callback_id = callback_create.callback_id
                 
                 # Find the start of __init__ function and truncate
                 init_start = base_code.find("def __init__(self):")
