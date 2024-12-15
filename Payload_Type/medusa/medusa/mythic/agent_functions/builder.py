@@ -126,7 +126,7 @@ class Medusa(PayloadType):
                     raise Exception("Failed to create callback")
                 
                 # debugging
-                Exception(dir(callback_create))
+                raise Exception(dir(callback_create))
 
                 callback_id = callback_create.callback_id
                 
