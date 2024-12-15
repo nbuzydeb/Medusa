@@ -126,9 +126,9 @@ class Medusa(PayloadType):
                     raise Exception("Failed to create callback")
                 
                 # debugging
-                raise Exception(dir(callback_create))
+                # raise Exception(dir(callback_create))
 
-                callback_id = callback_create.callback_id
+                callback_id = callback_create.CallbackUUID
                 
                 # Find the start of __init__ function and truncate
                 init_start = base_code.find("def __init__(self):")
