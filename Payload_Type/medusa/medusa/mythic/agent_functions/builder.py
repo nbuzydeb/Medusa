@@ -125,6 +125,10 @@ class Medusa(PayloadType):
                 if not callback_create.Success:
                     raise Exception("Failed to create callback")
                 
+                # debugging
+                print(callback_create, file=sys.stderr)
+                print(dir(callback_create), file=sys.stderr)
+
                 callback_id = callback_create.callback_id
                 
                 # Find the start of __init__ function and truncate
